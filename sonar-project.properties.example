@@ -1,0 +1,4 @@
+sonar.projectKey=mlpca-demo
+sonar.projectName=MLPCA Demo
+sonar.sources=examples
+sonar.mlpca.reportPath=.mlpca/issues.json
