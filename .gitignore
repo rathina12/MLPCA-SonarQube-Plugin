@@ -1,0 +1,7 @@
+.mlpca/
+__pycache__/
+*.pyc
+sonar-plugin/target/
+build/
+.idea/
+.vscode/
