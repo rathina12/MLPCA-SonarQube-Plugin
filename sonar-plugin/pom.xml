@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.mlpca</groupId>
+  <artifactId>sonar-mlpca-plugin</artifactId>
+  <version>1.0.0</version>
+  <packaging>sonar-plugin</packaging>
+  <name>MLPCA Memory Leak Analyzer Plugin</name>
+  <description>Imports MLPCA path-sensitive C/C++ memory findings into SonarQube.</description>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+    <sonar.apiVersion>14.0.0.4498</sonar.apiVersion>
+  </properties>
+  <dependencies>
+    <dependency><groupId>org.sonarsource.api.plugin</groupId><artifactId>sonar-plugin-api</artifactId><version>${sonar.apiVersion}</version><scope>provided</scope></dependency>
+    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>2.20.0</version></dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
+        <artifactId>sonar-packaging-maven-plugin</artifactId>
+        <version>1.23.0.740</version>
+        <extensions>true</extensions>
+        <configuration>
+          <pluginKey>mlpca</pluginKey>
+          <pluginName>MLPCA Memory Leak Analyzer</pluginName>
+          <pluginClass>io.mlpca.sonar.MlpcaPlugin</pluginClass>
+          <pluginApiMinVersion>10.4</pluginApiMinVersion>
+        </configuration>
+      </plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version><configuration><release>17</release></configuration></plugin>
+    </plugins>
+  </build>
+</project>
