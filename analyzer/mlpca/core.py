@@ -10,8 +10,7 @@ DEFAULT_CONFIG = {
     "deallocators": ["free"],
     "ownership_sinks": [],
     "max_paths_per_function": 64,
-    "loop_unroll": 1,
-    "include_rules": ["ML001","ML002","ML003","ML004","ML005","ML006","ML007","ML008"]
+    "include_rules": ["ML001","ML002","ML003","ML006","ML007","ML008"]
 }
 
 @dataclass
