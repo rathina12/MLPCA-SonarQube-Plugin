@@ -53,6 +53,8 @@ class Analyzer:
             if c=='\n': self._line_offsets.append(i+1)
         ast = self._clang_ast(path, clang_args or [])
         funcs = [n for n in self._walk(ast) if n.get('kind') in ('FunctionDecl','CXXMethodDecl') and self._is_user_node(n) and self._body(n)]
+        # Summaries are translation-unit local; never reuse summaries from a prior file.
+        self.function_summaries = {}
         self._build_summaries(funcs)
         before=len(self.issues)
         for fn in funcs: self._analyze_function(fn)
@@ -213,20 +215,42 @@ class Analyzer:
                 lhs=self._direct_var(inn[0]); rhs=inn[1]
                 for s in states:
                     if not lhs: continue
-                    old=s.env.get(lhs); ac=self._allocation_call(rhs); rhsrefs=self._var_refs(rhs)
-                    if old and s.allocations.get(old) and s.allocations[old].state=='ALLOCATED':
-                        s.allocations[old].aliases.discard(lhs)
-                        if not s.allocations[old].aliases:
-                            self._emit('ML002',f"Pointer '{lhs}' is overwritten before its previous allocation is released.",node,fn,s)
-                            s.allocations[old].state='LEAKED'
+                    old=s.env.get(lhs)
+                    rhs_var=self._direct_var(rhs)
+                    ac=self._allocation_call(rhs)
+                    # A self-assignment is not an overwrite, and must retain ownership.
+                    if rhs_var==lhs and ac is None:
+                        continue
+                    # A direct realloc assignment is a failure-path hazard, not an
+                    # unconditional leak. Do not also report an ML002 overwrite.
+                    direct_realloc=(ac is not None
+                        and ac[0] in self.config['reallocators']
+                        and old is not None and lhs in self._var_refs(rhs))
+                    if direct_realloc:
+                        self._emit('ML008',
+                            f"Direct assignment of {ac[0]} to '{lhs}' can lose the original allocation on failure.",
+                            node,fn,s,'MAJOR')
+                    if old and s.allocations.get(old):
+                        prior=s.allocations[old]
+                        prior.aliases.discard(lhs)
+                        if prior.state=='ALLOCATED' and not prior.aliases:
+                            if direct_realloc:
+                                # realloc may release/move the old allocation on success;
+                                # the failure-path hazard is already reported as ML008.
+                                prior.state='ESCAPED'
+                            else:
+                                self._emit('ML002',
+                                    f"Pointer '{lhs}' is overwritten before its previous allocation is released.",
+                                    node,fn,s)
+                                prior.state='LEAKED'
+                    # Remove stale bindings before assigning a new value.
+                    s.env.pop(lhs,None)
                     if ac:
-                        if ac[0] in self.config['reallocators'] and rhsrefs and lhs in rhsrefs:
-                            self._emit('ML008',f"Direct assignment of {ac[0]} to '{lhs}' can lose the original allocation on failure.",node,fn,s,'MINOR')
                         self._new_alloc(lhs,ac[0],node,s)
-                    else:
-                        src=next((r for r in rhsrefs if r in s.env),None)
-                        if src:
-                            aid=s.env[src]; s.env[lhs]=aid; s.allocations[aid].aliases.add(lhs)
+                    elif rhs_var and rhs_var in s.env:
+                        aid=s.env[rhs_var]
+                        s.env[lhs]=aid
+                        s.allocations[aid].aliases.add(lhs)
             return states
         if k=='CallExpr':
             c=self._callee(node); refs=self._var_refs(node)
