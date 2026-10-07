@@ -14,6 +14,18 @@ class AnalyzerTests(unittest.TestCase):
     def test_overwrite(self): self.assertIn('ML002', self.rules('overwrite.c'))
     def test_interproc_free(self): self.assertEqual([], self.rules('interproc_safe.c'))
     def test_double_free(self): self.assertIn('ML006', self.rules('double_free.c'))
-    def test_realloc_direct_assignment(self): self.assertIn('ML008', self.rules('realloc_direct_assign.c'))
+    def test_realloc_direct_assignment(self):
+        rules = self.rules('realloc_direct_assign.c')
+        self.assertIn('ML008', rules)
+        self.assertNotIn('ML002', rules)
+
+    def test_reassign_null_reports_overwrite(self):
+        self.assertIn('ML002', self.rules('reassign_null_leak.c'))
+
+    def test_alias_survives_reassignment(self):
+        self.assertEqual([], self.rules('reassign_alias_safe.c'))
+
+    def test_self_assignment_does_not_lose_ownership(self):
+        self.assertEqual([], self.rules('self_assignment_safe.c'))
 
 if __name__=='__main__': unittest.main()
