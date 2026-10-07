@@ -14,5 +14,6 @@ class AnalyzerTests(unittest.TestCase):
     def test_overwrite(self): self.assertIn('ML002', self.rules('overwrite.c'))
     def test_interproc_free(self): self.assertEqual([], self.rules('interproc_safe.c'))
     def test_double_free(self): self.assertIn('ML006', self.rules('double_free.c'))
+    def test_realloc_direct_assignment(self): self.assertIn('ML008', self.rules('realloc_direct_assign.c'))
 
 if __name__=='__main__': unittest.main()
