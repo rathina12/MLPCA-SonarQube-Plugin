@@ -1,8 +1,9 @@
-import sys, unittest
+import json, sys, tempfile, unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'analyzer'))
 from mlpca.core import Analyzer
+from mlpca.cli import compile_db_args
 
 class AnalyzerTests(unittest.TestCase):
     def rules(self,name):
@@ -27,5 +28,26 @@ class AnalyzerTests(unittest.TestCase):
 
     def test_self_assignment_does_not_lose_ownership(self):
         self.assertEqual([], self.rules('self_assignment_safe.c'))
+
+    def test_compile_database_relative_source_and_flags(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / 'src').mkdir()
+            src = project / 'src' / 'sample.c'
+            src.write_text('int main(void) { return 0; }')
+            commands = [{
+                'directory': str(project),
+                'file': 'src/sample.c',
+                'arguments': ['clang', '-c', 'src/sample.c', '-std=c99',
+                              '-Iinclude', '-o', 'sample.o', '-DTEST=1']
+            }]
+            (project / 'compile_commands.json').write_text(json.dumps(commands))
+            args = compile_db_args(project)[str(src.resolve())]
+            self.assertIn('-DTEST=1', args)
+            self.assertIn('-Iinclude', args)
+            self.assertNotIn('-c', args)
+            self.assertNotIn('-std=c99', args)
+            self.assertNotIn('-o', args)
+            self.assertNotIn('sample.o', args)
 
 if __name__=='__main__': unittest.main()
