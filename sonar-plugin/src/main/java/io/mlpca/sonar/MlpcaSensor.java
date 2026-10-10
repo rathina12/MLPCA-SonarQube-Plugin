@@ -38,8 +38,7 @@ public final class MlpcaSensor implements Sensor {
       JsonNode root = mapper.readTree(report.toFile());
       JsonNode issues = root.path("issues");
       if (!issues.isArray()) {
-        LOG.warn("MLPCA report has no 'issues' array: {}", report);
-        return;
+        throw new IllegalArgumentException("MLPCA report must contain an 'issues' JSON array: " + report);
       }
       int imported = 0;
       for (JsonNode item : issues) {
@@ -60,7 +59,9 @@ public final class MlpcaSensor implements Sensor {
     int line = Math.max(1, loc.path("textRange").path("startLine").asInt(1));
     if (filePath.isBlank()) return false;
 
-    InputFile input = context.fileSystem().inputFile(context.fileSystem().predicates().hasPath(filePath));
+    // MLPCA emits project-root-relative, forward-slash-separated source paths.
+    // Prefer Sonar's relative-path predicate for reliable indexing on all OSes.
+    InputFile input = context.fileSystem().inputFile(context.fileSystem().predicates().hasRelativePath(filePath.replace('\\\\', '/')));
     if (input == null) {
       LOG.warn("MLPCA issue skipped because file is not indexed by SonarScanner: {}", filePath);
       return false;
