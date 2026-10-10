@@ -9,21 +9,45 @@ def load_config(path):
     return cfg
 
 def compile_db_args(root):
-    p=Path(root)/'compile_commands.json'
-    if not p.exists(): return {}
-    rows=json.loads(p.read_text())
-    out={}
-    for r in rows:
-        f=str(Path(r['file']).resolve())
-        args=r.get('arguments') or shlex.split(r.get('command',''))
-        safe=[]; skip=False
-        for a in args[1:]:
-            if skip: skip=False; continue
-            if a in ('-o','-MF','-MT','-MQ'): skip=True; continue
-            if a==r['file'] or os.path.abspath(a)==f: continue
-            if a.startswith('-c'): continue
-            safe.append(a)
-        out[f]=safe
+    """Read compilation commands, normalizing file paths and argument order.
+
+    The clang invocation already supplies -x, -std, -fsyntax-only and the
+    source file, so discard conflicting compiler/driver-only arguments.
+    """
+    p = Path(root) / 'compile_commands.json'
+    if not p.is_file():
+        return {}
+    rows = json.loads(p.read_text(encoding='utf-8'))
+    out = {}
+    for row in rows:
+        cwd = Path(row.get('directory', str(root))).resolve()
+        src = Path(row['file'])
+        source = (cwd / src).resolve() if not src.is_absolute() else src.resolve()
+        raw = row.get('arguments') or shlex.split(row.get('command', ''))
+        if not raw:
+            continue
+        safe = []
+        skip_next = False
+        for arg in raw[1:]:
+            if skip_next:
+                skip_next = False
+                continue
+            if arg in ('-o', '-MF', '-MT', '-MQ', '-x', '-std',
+                       '-include-pch', '-isysroot', '--sysroot'):
+                skip_next = True
+                continue
+            if arg in ('-c', '-S', '-E', '-fsyntax-only'):
+                continue
+            if arg.startswith(('-o', '-MF', '-MT', '-MQ', '-std=', '-x')):
+                continue
+            candidate = Path(arg)
+            if arg == row['file'] or (not arg.startswith('-')
+                                      and (cwd / candidate).resolve() == source):
+                continue
+            safe.append(arg)
+        # Preserve the compilation directory's relative include paths.
+        safe.insert(0, '-I' + str(cwd))
+        out[str(source)] = safe
     return out
 
 def main():
