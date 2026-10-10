@@ -61,7 +61,7 @@ public final class MlpcaSensor implements Sensor {
 
     // MLPCA emits project-root-relative, forward-slash-separated source paths.
     // Prefer Sonar's relative-path predicate for reliable indexing on all OSes.
-    InputFile input = context.fileSystem().inputFile(context.fileSystem().predicates().hasRelativePath(filePath.replace('\\\\', '/')));
+    InputFile input = context.fileSystem().inputFile(context.fileSystem().predicates().hasRelativePath(filePath.replace((char) 92, '/')));
     if (input == null) {
       LOG.warn("MLPCA issue skipped because file is not indexed by SonarScanner: {}", filePath);
       return false;
