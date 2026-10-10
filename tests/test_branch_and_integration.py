@@ -53,7 +53,7 @@ class BranchAndIntegrationTests(unittest.TestCase):
     def test_sonar_output_schema_and_dedup(self):
         with tempfile.TemporaryDirectory() as directory:
             file = Path(directory) / "sample.c"
-            file.write_text("void f(){ int *p=malloc(4); }\n")
+            file.write_text("#include <stdlib.h>\nvoid f(){ int *p=malloc(4); }\n")
             issues = Analyzer().analyze_file(str(file))
             payload = issues_to_sonar(issues + issues, directory)
             self.assertTrue(payload["issues"])
