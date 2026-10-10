@@ -242,7 +242,7 @@ class Analyzer:
                                 a.state='FREED'
                             else: a.state='FREED'
                             s.path.append(f"L{self._line(node)}: {c}({v})")
-                    return states
+                    continue
                 if c in self.config['ownership_sinks']:
                     for v in refs:
                         aid=s.env.get(v)
