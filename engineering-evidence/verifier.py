@@ -33,6 +33,22 @@ def tests(fn):
         def test_bad_payload(self):
             with self.assertRaises(ValueError):
                 fn([], [r("a", "x", {1, 2})])
+        def test_reject_nonstring_json_keys(self):
+            with self.assertRaises(ValueError):
+                fn([], [r("a", "x", {1: "x"})])
+
+        def test_reject_nested_nonstring_keys(self):
+            with self.assertRaises(ValueError):
+                fn([], [r("a", "x", {"nested": {False: "x"}})])
+
+        def test_reject_nonfinite_numbers(self):
+            with self.assertRaises(ValueError):
+                fn([], [r("a", "x", [float("inf")])])
+
+        def test_reject_tuple_payload(self):
+            with self.assertRaises(ValueError):
+                fn([], [r("a", "x", (1, 2))])
+
         def test_immutable_results(self):
             existing = [r("a", "x", {"items": [1]})]
             result, _ = fn(existing, [])
