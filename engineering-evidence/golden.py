@@ -1,5 +1,23 @@
 import copy
 import json
+import math
+
+
+def validate_json(value):
+    """Validate the actual JSON data model before serialization."""
+    if value is None or type(value) in (str, bool, int):
+        return
+    if type(value) is float and math.isfinite(value):
+        return
+    if type(value) is list:
+        for child in value:
+            validate_json(child)
+        return
+    if type(value) is dict and all(type(key) is str for key in value):
+        for child in value.values():
+            validate_json(child)
+        return
+    raise ValueError("Invalid JSON payload")
 
 def ingest(existing, incoming):
     """Return fresh records, count of added events; reject conflicting retries."""
@@ -13,6 +31,7 @@ def ingest(existing, incoming):
         client, event = item["client_id"], item["event_id"]
         if not isinstance(client, str) or not client.strip() or not isinstance(event, str) or not event.strip():
             raise ValueError("Invalid key")
+        validate_json(item["payload"])
         try:
             payload = json.dumps(item["payload"], sort_keys=True, allow_nan=False)
         except (TypeError, ValueError):
