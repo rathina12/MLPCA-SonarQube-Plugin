@@ -1,0 +1,37 @@
+name: Engineering evidence tests
+on:
+  pull_request:
+    paths:
+      - 'engineering-evidence/**'
+      - '.github/workflows/engineering-evidence.yml'
+  push:
+    branches: [feature/reproducible-engineering-evidence]
+    paths:
+      - 'engineering-evidence/**'
+      - '.github/workflows/engineering-evidence.yml'
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run correctness and characterization tests
+        working-directory: engineering-evidence
+        run: python test_all.py
+      - name: Verify golden reference
+        working-directory: engineering-evidence
+        run: python verifier.py golden.py
+      - name: Verify deliberately broken starter fails
+        working-directory: engineering-evidence
+        shell: bash
+        run: |
+          if python verifier.py starter.py; then
+            echo 'Broken starter unexpectedly passed verifier'
+            exit 1
+          fi
+          echo 'Expected verifier rejection confirmed'
+      - name: Run deterministic benchmark
+        working-directory: engineering-evidence
+        run: python benchmark.py
